@@ -51,7 +51,7 @@ const authenticateToken = (request, response, next) => {
   }
 };
 
-app.post("/login/", authenticateToken, async (request, response) => {
+app.post("/login/", async (request, response) => {
   const { username, password } = request.body;
 
   const selectUserQuery = `SELECT * FROM user WHERE username='${username}';`;
@@ -95,19 +95,19 @@ const convertDistrictObjectToDbObject = (eachDistrict) => {
     deaths: eachDistrict.deaths,
   };
 };
-app.get("/states/", async (request, response) => {
+app.get("/states/", authenticateToken, async (request, response) => {
   const allStatesQuery = `SELECT * FROM state;`;
 
   const dbStates = await db.all(allStatesQuery);
 
   response.send(
-    dbStates.map((eachState) => {
+    dbStates.map((eachState) => 
       convertSnakeIntoPascalCase(eachState);
-    })
+    )
   );
 });
 
-app.get("/states/:stateId/", async (request, response) => {
+app.get("/states/:stateId/", authenticateToken, async (request, response) => {
   const { stateId } = request.params;
   const selectedStateQuery = `SELECT * FROM state WHERE state_id = ${stateId};`;
 
@@ -132,29 +132,44 @@ app.get("/districts/:districtId/", async (request, response) => {
 
   const dbDistrict = await db.get(selectedDistrictQuery);
   response.send(
-    dbDistrict.map((eachDistrict) => {
+    dbDistrict.map((eachDistrict) => 
       convertDistrictObjectToDbObject(eachDistrict);
-    })
+    )
   );
 });
 
-app.delete("/districts/:districtId/", async (request, response) => {
-  const { districtId } = request.params;
-  const deleteQuery = `DELETE FROM district WHERE district_id=${districtId};`;
+app.delete(
+  "/districts/:districtId/",
+  authenticateToken,
+  async (request, response) => {
+    const { districtId } = request.params;
+    const deleteQuery = `DELETE FROM district WHERE district_id=${districtId};`;
 
-  await db.run(deleteQuery);
-  response.send("District Removed");
-});
+    await db.run(deleteQuery);
+    response.send("District Removed");
+  }
+);
 
-app.put("/districts/:districtId/", async (request, response) => {
-  const { districtId } = request.params;
-  const { districtName, stateId, cases, cured, active, deaths } = request.body;
-  const updateQuery = `UPDATE district SET district_name = '${districtName}',
+app.put(
+  "/districts/:districtId/",
+  authenticateToken,
+  async (request, response) => {
+    const { districtId } = request.params;
+    const {
+      districtName,
+      stateId,
+      cases,
+      cured,
+      active,
+      deaths,
+    } = request.body;
+    const updateQuery = `UPDATE district SET district_name = '${districtName}',
     state_id = ${stateId}, cases = ${cases}, cured=${cured}, active=${active}, deaths=${deaths} WHERE district_id=${districtId};`;
 
-  await db.run(updateQuery);
-  response.send("District Details Updated");
-});
+    await db.run(updateQuery);
+    response.send("District Details Updated");
+  }
+);
 
 app.get("/states/:stateId/stats/", async (request, response) => {
   const { stateId } = request.params;
